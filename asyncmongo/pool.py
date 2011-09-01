@@ -100,7 +100,6 @@ class ConnectionPool(object):
         
         # Establish an initial number of idle database connections:
         idle = [self.connection() for i in range(mincached)]
-        print idle
         while idle:
             self.cache(idle.pop())
     
@@ -112,7 +111,6 @@ class ConnectionPool(object):
         # Authenticate if user and pass are set
         if self._dbuser and self._dbpass:
             c = copy.copy(self)
-            print 'in new_connection'
             try:
                 self.conn.send_message(
                         message.query(0,
@@ -123,15 +121,15 @@ class ConnectionPool(object):
                                       SON({})
                             ), callback=c._on_get_nonce)
             except Exception as e:
-                print str(e)
-            print 'sent message'
-        return self.conn
+                # logging.error(str(e))
+            return c.conn
+        else:
+            return self.conn
 
     
     def connection(self):
         """ get a cached connection from the pool """
         
-        print 'in Connection().connection'
         self._condition.acquire()
         try:
             if (self._maxconnections and self._connections >= self._maxconnections):
@@ -186,7 +184,6 @@ class ConnectionPool(object):
             self._condition.release()
     
     def _on_get_nonce(self, response, error=None):
-        print '%s now in get_nonce' % hex(id(self))
         if error:
             raise AuthenticationError(error)
         nonce = response['data'][0]['nonce']
@@ -206,6 +203,5 @@ class ConnectionPool(object):
     def _on_authenticate(self, response, error=None):
         if error:
             raise AuthenticationError(error)
-        print "we are authenticated now"
-        print response
+        self.conn
         
