@@ -15,28 +15,37 @@ Installing from source: `git clone git://github.com/bitly/asyncmongo.git; cd asy
 
 Usage
 -----
-
-    import asyncmongo
     import tornado.web
-    
-    class Handler(tornado.web.RequestHandler):
-        @property
-        def db(self):
-            if not hasattr(self, '_db'):
-                self._db = asyncmongo.Client(pool_id='mydb', host='127.0.0.1', port=27017, maxcached=10, maxconnections=50, dbname='test')
-            return self._db
-    
+    import tornado.ioloop
+    import asyncmongo
+
+    class MainHandler(tornado.web.RequestHandler):
         @tornado.web.asynchronous
         def get(self):
-            self.db.users.find({'username': self.current_user}, limit=1, callback=self._on_response)
-            # or
-            # conn = self.db.connection(collectionname="...", dbname="...")
-            # conn.find(..., callback=self._on_response)
-    
+            print 'debug'
+            db.users.find({"user_id" : 1}, callback=self._on_response)
+
         def _on_response(self, response, error):
             if error:
-                raise tornado.web.HTTPError(500)
-            self.render('template', full_name=respose['full_name'])
+                self.write(str(error))
+            self.write(str(response))
+            self.finish()
+
+    if __name__ == "__main__":
+        application = tornado.web.Application([
+                (r"/?", MainHandler)
+                ])
+        application.listen(8888)
+        db = asyncmongo.Client(pool_id="mydb",
+                               host='staff.mongohq.com',
+                               port=10025,
+                               mincached=30,
+                               maxcached=30,
+                               maxconnections=30,
+                               dbname='dbname', 
+                               dbuser='username',
+                               dbpass='password')
+        tornado.ioloop.IOLoop.instance().start()
 
 About
 -----
@@ -44,6 +53,8 @@ About
 Features not supported: some features from pymongo are not currently implemented. i.e.: directly 
 interfacing with indexes, dropping collections, and retrieving results in batches instead of all at once. 
 (asyncmongo's nature means that no calls are blocking regardless of the number of results you are retrieving)
+
+Warning: If you need authentication it is advisable to use a fully cached connection pool. As of now when connections are created the first database request will be processed before the authentication callbacks have fully executed. The connection will however be fully created and authenticated and subsequent requests made with that connection will succeed. If someone wants to complete the last mile that would be great. What I have here works for me at the moment. 
 
 Requirements
 ------------
