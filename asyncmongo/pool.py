@@ -122,6 +122,7 @@ class ConnectionPool(object):
                             ), callback=c._on_get_nonce)
             except Exception as e:
                 # logging.error(str(e))
+                raise 
             return c.conn
         else:
             return self.conn
@@ -203,5 +204,3 @@ class ConnectionPool(object):
     def _on_authenticate(self, response, error=None):
         if error:
             raise AuthenticationError(error)
-        self.conn
-        
