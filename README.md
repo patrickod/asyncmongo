@@ -7,11 +7,9 @@ which is built on the tornado ioloop.
 Installation
 ------------
 
-Installing: `pip install asyncmongo`
+Installing form github: `pip install -e git://github.com/patrickod/asyncmongo.git#egg=asyncmongo`
 
-Installing form github: `pip install -e git://github.com/bitly/asyncmongo.git#egg=asyncmongo`
-
-Installing from source: `git clone git://github.com/bitly/asyncmongo.git; cd asyncmongo; python setup.py install`
+Installing from source: `git clone git://github.com/patrickod/asyncmongo.git; cd asyncmongo; python setup.py install`
 
 Usage
 -----
@@ -54,7 +52,7 @@ Features not supported: some features from pymongo are not currently implemented
 interfacing with indexes, dropping collections, and retrieving results in batches instead of all at once. 
 (asyncmongo's nature means that no calls are blocking regardless of the number of results you are retrieving)
 
-Warning: If you need authentication it is advisable to use a fully cached connection pool. As of now when connections are created the first database request will be processed before the authentication callbacks have fully executed. The connection will however be fully created and authenticated and subsequent requests made with that connection will succeed. If someone wants to complete the last mile that would be great. What I have here works for me at the moment. 
+WARNING: If you need authentication it is advisable to use a fully cached connection pool. As of now when connections are created the first database request will be processed before the authentication callbacks have fully executed. The connection will however be fully created and authenticated and subsequent requests made with that connection will succeed. If someone wants to complete the last mile that would be great. What I have here works for me at the moment. 
 
 Requirements
 ------------
