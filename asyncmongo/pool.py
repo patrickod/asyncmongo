@@ -16,8 +16,12 @@
 
 from threading import Condition
 import logging
-from errors import TooManyConnections, ProgrammingError
+import hashlib
+from bson.son import SON
+from errors import TooManyConnections, ProgrammingError, AuthenticationError
 from connection import Connection
+import message
+
 
 class ConnectionPools(object):
     """ singleton to keep track of named connection pools """
@@ -65,7 +69,9 @@ class ConnectionPool(object):
                 maxcached=0, 
                 maxconnections=0, 
                 maxusage=0, 
-                dbname=None, 
+                dbname=None,
+                dbuser=None,
+                dbpass=None,
                 *args, **kwargs):
         assert isinstance(mincached, int)
         assert isinstance(maxcached, int)
@@ -85,21 +91,45 @@ class ConnectionPool(object):
         self._idle_cache = [] # the actual connections that can be used
         self._condition = Condition()
         self._dbname = dbname
+        self._dbuser = dbuser
+        self._dbpass = dbpass
+        
         self._connections = 0
+
         
         # Establish an initial number of idle database connections:
         idle = [self.connection() for i in range(mincached)]
+        print idle
         while idle:
             self.cache(idle.pop())
     
     def new_connection(self):
         kwargs = self._kwargs
         kwargs['pool'] = self
-        return Connection(*self._args, **kwargs)
+        self.conn =  Connection(*self._args, **kwargs)
+
+        # Authenticate if user and pass are set
+        if self._dbuser and self._dbpass:
+            print 'in new_connection'
+            try:
+                self.conn.send_message(
+                        message.query(0,
+                                      "%s.$cmd" % self._dbname,
+                                      0,
+                                      1,
+                                      SON({'getnonce' : 1}),
+                                      SON({})
+                            ), callback=self._on_get_nonce)
+            except Exception as e:
+                print str(e)
+            print 'sent message'
+        return self.conn
+
     
     def connection(self):
         """ get a cached connection from the pool """
         
+        print 'in Connection().connection'
         self._condition.acquire()
         try:
             if (self._maxconnections and self._connections >= self._maxconnections):
@@ -153,4 +183,27 @@ class ConnectionPool(object):
         finally:
             self._condition.release()
     
+    def _on_get_nonce(self, response, error=None):
+        print 'now in get_nonce'
+        if error:
+            raise AuthenticationError(error)
+        nonce = response['data'][0]['nonce']
+        key = hashlib.md5(nonce + self._dbuser + hashlib.md5(self._dbuser + ":mongo:" + self._dbpass).hexdigest()).hexdigest()
 
+        command = SON([('authenticate', 1)])
+        command.update({'user' : self._dbuser, 'nonce' : nonce, 'key' : key})
+        self.conn.send_message(
+                message.query(0,
+                              "%s.$cmd" % self._dbname,
+                              0,
+                              1,
+                              command,
+                              SON({})),callback=self._on_authenticate)
+
+
+    def _on_authenticate(self, response, error=None):
+        if error:
+            raise AuthenticationError(error)
+        print "we are authenticated now"
+        print response
+        
