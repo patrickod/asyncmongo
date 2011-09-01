@@ -17,6 +17,7 @@
 from threading import Condition
 import logging
 import hashlib
+import copy
 from bson.son import SON
 from errors import TooManyConnections, ProgrammingError, AuthenticationError
 from connection import Connection
@@ -110,6 +111,7 @@ class ConnectionPool(object):
 
         # Authenticate if user and pass are set
         if self._dbuser and self._dbpass:
+            c = copy.copy(self)
             print 'in new_connection'
             try:
                 self.conn.send_message(
@@ -119,7 +121,7 @@ class ConnectionPool(object):
                                       1,
                                       SON({'getnonce' : 1}),
                                       SON({})
-                            ), callback=self._on_get_nonce)
+                            ), callback=c._on_get_nonce)
             except Exception as e:
                 print str(e)
             print 'sent message'
@@ -184,7 +186,7 @@ class ConnectionPool(object):
             self._condition.release()
     
     def _on_get_nonce(self, response, error=None):
-        print 'now in get_nonce'
+        print '%s now in get_nonce' % hex(id(self))
         if error:
             raise AuthenticationError(error)
         nonce = response['data'][0]['nonce']

@@ -373,9 +373,13 @@ class Cursor(object):
             connection.send_message(
                 message.query(self.__query_options(),
                               self.full_collection_name,
-                              self.__skip, self.__limit,
-                              self.__query_spec(), self.__fields), callback=functools.partial(self._handle_response, orig_callback=callback))
-        except:
+                              self.__skip, 
+                              self.__limit,
+                              self.__query_spec(),
+                              self.__fields), 
+                callback=functools.partial(self._handle_response, orig_callback=callback))
+        except Exception as e:
+            print '%s sending failed' % hex(id(self))
             connection.close()
     
     def _handle_response(self, result, error=None, orig_callback=None):
